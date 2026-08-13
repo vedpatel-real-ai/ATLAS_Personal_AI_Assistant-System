@@ -1,0 +1,430 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>AI Assistant</title>
+<style>
+  :root {
+    --bg: #0f1115;
+    --panel: #171a21;
+    --border: #262b36;
+    --text: #e6e8ec;
+    --muted: #8b93a3;
+    --accent: #4f8cff;
+    --user-bubble: #2a3550;
+    --assistant-bubble: #1c202b;
+    --error: #ff5c5c;
+    --confirm: #f5a623;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    background: var(--bg);
+    color: var(--text);
+    font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", sans-serif;
+    height: 100vh;
+    display: flex;
+    flex-direction: column;
+  }
+  header {
+    padding: 14px 20px;
+    border-bottom: 1px solid var(--border);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    background: var(--panel);
+  }
+  header h1 {
+    font-size: 15px;
+    font-weight: 600;
+    margin: 0;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+  .dot {
+    width: 8px; height: 8px; border-radius: 50%;
+    background: var(--muted);
+  }
+  .dot.ok { background: #37d67a; }
+  .dot.err { background: var(--error); }
+  #keyBtn {
+    background: none;
+    border: 1px solid var(--border);
+    color: var(--muted);
+    font-size: 12px;
+    padding: 5px 10px;
+    border-radius: 6px;
+    cursor: pointer;
+  }
+  #keyBtn:hover { color: var(--text); border-color: var(--muted); }
+  #stopBtn {
+    background: none;
+    border: 1px solid rgba(255,92,92,0.4);
+    color: var(--error);
+    font-size: 12px;
+    padding: 5px 10px;
+    border-radius: 6px;
+    cursor: pointer;
+  }
+  #stopBtn:hover { background: rgba(255,92,92,0.12); }
+  #stopBtn:disabled { opacity: 0.5; cursor: default; }
+
+  #setup {
+    max-width: 420px;
+    margin: 80px auto;
+    padding: 24px;
+    background: var(--panel);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    text-align: center;
+  }
+  #setup p { color: var(--muted); font-size: 13px; line-height: 1.5; }
+  #setup input {
+    width: 100%;
+    padding: 10px;
+    border-radius: 6px;
+    border: 1px solid var(--border);
+    background: #0d0f14;
+    color: var(--text);
+    font-size: 13px;
+    margin: 12px 0;
+  }
+  #setup button {
+    width: 100%;
+    padding: 10px;
+    border-radius: 6px;
+    border: none;
+    background: var(--accent);
+    color: white;
+    font-weight: 600;
+    cursor: pointer;
+  }
+
+  #log {
+    flex: 1;
+    overflow-y: auto;
+    padding: 20px;
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+  }
+  .row { display: flex; flex-direction: column; max-width: 70%; }
+  .row.user { align-self: flex-end; align-items: flex-end; }
+  .row.assistant { align-self: flex-start; align-items: flex-start; }
+  .bubble {
+    padding: 10px 14px;
+    border-radius: 12px;
+    font-size: 14px;
+    line-height: 1.45;
+    white-space: pre-wrap;
+    word-break: break-word;
+  }
+  .row.user .bubble { background: var(--user-bubble); border-bottom-right-radius: 4px; }
+  .row.assistant .bubble { background: var(--assistant-bubble); border-bottom-left-radius: 4px; }
+  .bubble.error { background: rgba(255,92,92,0.12); color: var(--error); border: 1px solid rgba(255,92,92,0.3); }
+  .bubble.confirm { background: rgba(245,166,35,0.1); color: var(--text); border: 1px solid rgba(245,166,35,0.35); }
+
+  .meta {
+    font-size: 11px;
+    color: var(--muted);
+    margin-top: 4px;
+    display: flex;
+    gap: 6px;
+  }
+  .tag {
+    background: #0d0f14;
+    border: 1px solid var(--border);
+    padding: 1px 6px;
+    border-radius: 4px;
+  }
+
+  .confirmActions { display: flex; gap: 8px; margin-top: 8px; }
+  .confirmActions button {
+    padding: 6px 12px;
+    border-radius: 6px;
+    border: 1px solid var(--border);
+    background: #0d0f14;
+    color: var(--text);
+    font-size: 12px;
+    cursor: pointer;
+  }
+  .confirmActions button.yes { border-color: var(--confirm); color: var(--confirm); }
+  .confirmActions button.no { border-color: var(--error); color: var(--error); }
+
+  #inputBar {
+    display: flex;
+    gap: 10px;
+    padding: 14px 20px;
+    border-top: 1px solid var(--border);
+    background: var(--panel);
+  }
+  #inputBar textarea {
+    flex: 1;
+    resize: none;
+    background: #0d0f14;
+    border: 1px solid var(--border);
+    color: var(--text);
+    border-radius: 8px;
+    padding: 10px 12px;
+    font-size: 14px;
+    font-family: inherit;
+    height: 44px;
+  }
+  #inputBar button {
+    padding: 0 20px;
+    border-radius: 8px;
+    border: none;
+    background: var(--accent);
+    color: white;
+    font-weight: 600;
+    cursor: pointer;
+  }
+  #inputBar button:disabled { opacity: 0.5; cursor: default; }
+
+  .hidden { display: none !important; }
+</style>
+</head>
+<body>
+
+<header>
+  <h1><span class="dot" id="statusDot"></span> AI Assistant</h1>
+  <div style="display:flex; gap:8px;">
+    <button id="keyBtn">API key</button>
+    <button id="stopBtn">🛑 Stop</button>
+  </div>
+</header>
+
+<div id="setup" class="hidden">
+  <p>Enter your <code>ASSISTANT_API_KEY</code> (same value <code>start.sh</code> exports).
+  Stored only in this browser's local storage — never sent anywhere but
+  <code>127.0.0.1:8420</code>.</p>
+  <input id="keyInput" type="password" placeholder="API key" autocomplete="off">
+  <button id="saveKey">Save</button>
+</div>
+
+<div id="log" class="hidden"></div>
+
+<div id="inputBar" class="hidden">
+  <textarea id="msgInput" placeholder="Type an instruction…" rows="1"></textarea>
+  <button id="sendBtn">Send</button>
+</div>
+
+<script>
+const ENDPOINT = "http://127.0.0.1:8420/command";
+const log = document.getElementById("log");
+const setup = document.getElementById("setup");
+const inputBar = document.getElementById("inputBar");
+const keyInput = document.getElementById("keyInput");
+const msgInput = document.getElementById("msgInput");
+const sendBtn = document.getElementById("sendBtn");
+const statusDot = document.getElementById("statusDot");
+const keyBtn = document.getElementById("keyBtn");
+
+// Paste your ASSISTANT_API_KEY here (same value as in start.sh) so the
+// chat page never prompts for it. This file lives locally next to
+// main.py — same trust boundary start.sh already assumes.
+const DEFAULT_API_KEY = "PASTE_YOUR_KEY_HERE";
+
+let apiKey = localStorage.getItem("assistant_api_key") || DEFAULT_API_KEY;
+if (apiKey && apiKey !== "PASTE_YOUR_KEY_HERE" && !localStorage.getItem("assistant_api_key")) {
+  localStorage.setItem("assistant_api_key", apiKey);
+}
+
+function showChat() {
+  setup.classList.add("hidden");
+  log.classList.remove("hidden");
+  inputBar.classList.remove("hidden");
+  msgInput.focus();
+}
+function showSetup() {
+  setup.classList.remove("hidden");
+  log.classList.add("hidden");
+  inputBar.classList.add("hidden");
+  keyInput.value = apiKey;
+}
+
+keyBtn.onclick = showSetup;
+document.getElementById("saveKey").onclick = () => {
+  apiKey = keyInput.value.trim();
+  localStorage.setItem("assistant_api_key", apiKey);
+  showChat();
+};
+
+const stopBtn = document.getElementById("stopBtn");
+stopBtn.onclick = async () => {
+  if (!confirm("Stop the AI Assistant (Ollama + FastAPI)? This ends this chat session.")) return;
+  stopBtn.disabled = true;
+  stopBtn.textContent = "Stopping…";
+  try {
+    await fetch("http://127.0.0.1:8420/shutdown", {
+      method: "POST",
+      headers: { "X-API-Key": apiKey }
+    });
+  } catch (e) {
+    // The server killing itself often drops the connection before
+    // responding cleanly — that's success, not failure, here.
+  }
+  addBubble("assistant", "Stop signal sent. Ollama and FastAPI are shutting down.");
+  statusDot.className = "dot err";
+  msgInput.disabled = true;
+  sendBtn.disabled = true;
+  stopBtn.textContent = "🛑 Stop";
+};
+
+function addRow(role) {
+  const row = document.createElement("div");
+  row.className = "row " + role;
+  log.appendChild(row);
+  return row;
+}
+
+function addBubble(role, text, extraClass) {
+  const row = addRow(role);
+  const bubble = document.createElement("div");
+  bubble.className = "bubble" + (extraClass ? " " + extraClass : "");
+  bubble.textContent = text;
+  row.appendChild(bubble);
+  log.scrollTop = log.scrollHeight;
+  return row;
+}
+
+function addMeta(row, parts) {
+  const meta = document.createElement("div");
+  meta.className = "meta";
+  parts.forEach(p => {
+    const tag = document.createElement("span");
+    tag.className = "tag";
+    tag.textContent = p;
+    meta.appendChild(tag);
+  });
+  row.appendChild(meta);
+}
+
+async function callAssistant(text, confirmed, confirmToken) {
+  const res = await fetch(ENDPOINT, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      "X-API-Key": apiKey
+    },
+    body: JSON.stringify({ text, confirmed: !!confirmed, confirm_token: confirmToken || null })
+  });
+  if (res.status === 401) {
+    const err = new Error("unauthorized");
+    err.isAuthError = true;
+    throw err;
+  }
+  if (!res.ok) {
+    const err = new Error("HTTP " + res.status);
+    err.status = res.status;
+    throw err;
+  }
+  return res.json();
+}
+
+function renderResponse(originalText, data) {
+  if (data.type === "text") {
+    const row = addBubble("assistant", data.response);
+    addMeta(row, [data.model || data.route || "reasoning model"].filter(Boolean));
+  } else if (data.type === "tool_result") {
+    const steps = data.results || [];
+    const lines = steps.map(s => {
+      const r = s.result || {};
+      const text = typeof r === "string" ? r : (r.message || JSON.stringify(r));
+      const mark = s.success === false ? "⚠️ " : "";
+      return steps.length > 1 ? `${mark}${text}` : `${mark}${text}`;
+    });
+    const resultText = lines.join("\n") || "Done.";
+    const row = addBubble("assistant", resultText);
+    const toolTags = steps.map(s => s.tool).filter(Boolean);
+    addMeta(row, [...toolTags, data.route].filter(Boolean));
+  } else if (data.type === "confirm_required") {
+    const steps = data.steps || [];
+    const summary = steps.length === 1
+      ? `This wants to run "${steps[0].tool}" (${steps[0].tier} action). Confirm?`
+      : `This wants to run ${steps.length} steps, including ${
+          steps.filter(s => s.tier !== "safe").map(s => `"${s.tool}" (${s.tier})`).join(", ")
+        }. Confirm all?`;
+    const row = addBubble("assistant", summary, "confirm");
+    const actions = document.createElement("div");
+    actions.className = "confirmActions";
+    const yes = document.createElement("button");
+    yes.className = "yes";
+    yes.textContent = "Confirm";
+    yes.onclick = async () => {
+      actions.remove();
+      // Server-issued token (Milestone 0) bound to these exact steps — the
+      // server won't act on `confirmed: true` alone, so this must be sent
+      // back on the confirmed call.
+      await send(originalText, true, data.confirm_token);
+    };
+    const no = document.createElement("button");
+    no.className = "no";
+    no.textContent = "Cancel";
+    no.onclick = () => {
+      actions.remove();
+      addBubble("assistant", "Cancelled.");
+    };
+    actions.appendChild(yes);
+    actions.appendChild(no);
+    row.appendChild(actions);
+  } else if (data.type === "error") {
+    addBubble("assistant", data.response || "Unknown error.", "error");
+  } else {
+    addBubble("assistant", JSON.stringify(data), "error");
+  }
+}
+
+async function send(text, confirmed, confirmToken) {
+  sendBtn.disabled = true;
+  const thinkingRow = addBubble("assistant", "thinking...");
+  try {
+    const data = await callAssistant(text, confirmed, confirmToken);
+    statusDot.className = "dot ok";
+    thinkingRow.remove();
+    renderResponse(text, data);
+  } catch (err) {
+    statusDot.className = "dot err";
+    thinkingRow.remove();
+    if (err.isAuthError) {
+      addBubble("assistant",
+        "401 Unauthorized — the API key in this page doesn't match ASSISTANT_API_KEY in start.sh. Click \"API key\" above and re-check it.",
+        "error");
+    } else if (err.status) {
+      addBubble("assistant",
+        `Server responded with an error (HTTP ${err.status}). Check the assistant.log terminal for details.`,
+        "error");
+    } else {
+      addBubble("assistant",
+        "Can't reach the assistant at 127.0.0.1:8420 — is start.sh running?",
+        "error");
+    }
+  } finally {
+    sendBtn.disabled = false;
+  }
+}
+
+sendBtn.onclick = () => {
+  const text = msgInput.value.trim();
+  if (!text) return;
+  addBubble("user", text);
+  msgInput.value = "";
+  send(text, false);
+};
+
+msgInput.addEventListener("keydown", (e) => {
+  if (e.key === "Enter" && !e.shiftKey) {
+    e.preventDefault();
+    sendBtn.click();
+  }
+});
+
+if (apiKey && apiKey !== "PASTE_YOUR_KEY_HERE") {
+  showChat();
+} else {
+  showSetup();
+}
+</script>
+</body>
+</html>
