@@ -1,6 +1,6 @@
 # ATLAS verification
 
-ATLAS is a macOS assistant that connects natural-language requests to local tools. A battery question can be handled by a pattern and a Python function. A repository question can invoke an import scan. A local model helps interpret requests that need more flexible phrasing. [Project explanation](../mitacs/ATLAS_SIMPLE_EXPLANATION.md)
+ATLAS is a macOS assistant that connects natural-language requests to local tools. A battery question can be handled by a pattern and a Python function. A repository question can invoke an import scan. A local model helps interpret requests that need more flexible phrasing. [Project explanation](../project-guide/HOW_IT_WORKS.md)
 
 ### Verified implementation
 
@@ -31,4 +31,4 @@ python scripts/verify_tests.py /tmp/atlas-test-evidence
 python verify_models.py /tmp/atlas-model-evidence
 ```
 
-The tests exercise local files, Git, SQLite and in-process HTTP. External calls and selected hardware responses use fixtures. Live model accuracy, end-user approval behavior and crash resumption were outside the test claim. [Test inventory](TEST_VERIFICATION.md) · [Benchmark protocol](../../evidence/benchmarks/2026-11-19/methodology.md) · [Interview guide](../mitacs/ATLAS_INTERVIEW_QA.md)
+The tests exercise local files, Git, SQLite and in-process HTTP. External calls and selected hardware responses use fixtures. Live model accuracy, end-user approval behavior and crash resumption were outside the test claim. [Test inventory](TEST_VERIFICATION.md) · [Benchmark protocol](../../evidence/benchmarks/2026-11-19/methodology.md) · [Technical FAQ](../project-guide/TECHNICAL_FAQ.md)

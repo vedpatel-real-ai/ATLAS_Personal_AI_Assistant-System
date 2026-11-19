@@ -47,15 +47,16 @@ def get(base, path):
 
 def run(out, base, order):
     env = dict(started_utc=now(), macos=platform.mac_ver()[0], architecture=platform.machine(),
-               python=platform.python_version(), ollama=get(base, "/version")["version"],
+               python=platform.python_version(), ollama=None,
                order=order, snapshots=[], status="preflight")
-    inventory = {m["name"]: m for m in get(base, "/tags")["models"]}
-    models = {tag: {k: inventory[tag].get(k) for k in ("name", "digest", "size", "details")}
-              for tag in order if tag in inventory}
-    save(out, "model-configurations.json", dict(models=models, requested_options=OPTIONS,
-         think=False, tasks=TASKS, repetitions=3, warmups_per_model=1))
     rows = []
     try:
+        env["ollama"] = get(base, "/version")["version"]
+        inventory = {m["name"]: m for m in get(base, "/tags")["models"]}
+        models = {tag: {k: inventory[tag].get(k) for k in ("name", "digest", "size", "details")}
+                  for tag in order if tag in inventory}
+        save(out, "model-configurations.json", dict(models=models, requested_options=OPTIONS,
+             think=False, tasks=TASKS, repetitions=3, warmups_per_model=1))
         if len(models) != len(order):
             raise RuntimeError("Requested tag missing locally")
         for tag in order:

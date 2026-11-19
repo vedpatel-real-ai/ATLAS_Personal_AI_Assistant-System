@@ -1,6 +1,6 @@
 # ATLAS claim verification matrix
 
-Use the wording in the middle column when discussing the submitted project. This audit evaluates technical statements. Individual authorship and the dates of personal work require the contributor’s own records.
+Each row connects an implementation or measurement to the source that a reader can inspect and the limits of that evidence.
 
 | Claim | Wording supported by the evidence | Evidence and boundary |
 |---|---|---|
@@ -14,4 +14,3 @@ Use the wording in the middle column when discussing the submitted project. This
 | 355 tests | 355 original cases passed on 19 November, plus 23 new regression cases in the final run. | [Test evidence](TEST_VERIFICATION.md). Many cases deliberately replace external boundaries. |
 | Compared 4B and 8B to select a model | The project supports model evaluation and currently configures a 4B model. Historical selection remains unverified. A fresh 4B warm-up triggered the resource stop. | [Trial and limits](BENCHMARK_VERIFICATION.md). No matched 8B inference or quality comparison. |
 | Reduced document input | The July report recorded about 71.5% fewer prompt characters and 2,050 evaluated prompt tokens on each path. | [Historical report](../benchmark-report.md). No demonstrated token or speed gain. |
-| Personal contributions | Specify only decisions, tests, edits and experiments the presenter can independently describe and substantiate. | [Blank contribution worksheet](../mitacs/CONTRIBUTIONS.md). Git history and assistant-generated artifacts cannot settle authorship. |
