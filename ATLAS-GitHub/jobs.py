@@ -30,13 +30,9 @@ Two kinds of state, split deliberately:
    not a normal-operation case worth over-engineering around.
 
 Execution model: `run_in_background()` is a thin `threading.Thread`
-wrapper — no pool, no queue, no max-concurrency limit. main.py's existing
-`MODEL_LOCK` already serializes access to the router/reasoning models, so
-two background jobs that both need a model still can't collide; two
-background jobs that only run local tool calls (no model) can run
-concurrently, which is fine — nothing about `execute_tool` assumes
-single-threaded access, and `storage.py`'s own `_lock` already serializes
-every SQLite write regardless of caller.
+wrapper — no pool, no queue, no max-concurrency limit. The process-local model lock in main.py
+covers classification and direct reasoning. Tools that summarize content
+make their own model calls. The SQLite layer locks its writes.
 
 Cancellation is best-effort and step-granular, not mid-step: see
 `planner.execute_plan()`'s own docstring for exactly when a cancel

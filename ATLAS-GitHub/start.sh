@@ -4,7 +4,8 @@ PROJECT="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 
 cd "$PROJECT" || exit 1
 
-source venv/bin/activate
+source venv/bin/activate || exit 1
+mkdir -p logs
 
 # --- API key (Milestone 0 fix) ---------------------------------------
 # Previously this script hardcoded ASSISTANT_API_KEY in plaintext, which
