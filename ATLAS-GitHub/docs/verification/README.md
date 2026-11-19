@@ -10,7 +10,7 @@ The registry contains 24 entries. Twenty-two have substantive implementations. E
 
 On 19 November 2026 the **355 original cases passed** with isolated storage and OS boundaries. The final suite passed **378 of 378**, with zero failures, skips or errors and one dependency warning. That local run used macOS 27.0 arm64, Python 3.12.13 and pytest 9.1.1 at `ac5d7ed12629028ba54a6be4d1b2c66b4a795de0`. A first fixture attempt failed 16 cases and is preserved alongside both passing runs. [Test verification](TEST_VERIFICATION.md) · [Terminal transcript](../../evidence/tests/2026-11-19/final/pytest-output.txt) · [JUnit XML](../../evidence/tests/2026-11-19/final/junit.xml)
 
-For an independent check, open the hosted run for the same application code, inspect the pytest step and compare its artifact with the local report. [Hosted macOS job and downloadable pytest artifact](https://github.com/vedpatel-real-ai/ATLAS_Personal_AI_Assistant-System/actions/runs/44575159716)
+GitHub Actions independently passed **378 of 378** on macOS 15.8.2 arm64 with Python 3.12.10. Its pull-request merge revision was `306cfd39cddd0b902abaf3e765df468a67ca30f3`. Open the job summary or download the `pytest-macos` artifact to inspect the hosted transcript and JUnit XML. [Completed GitHub Actions run](https://github.com/vedpatel-real-ai/ATLAS_Personal_AI_Assistant-System/actions/runs/44576110069)
 
 ### Model benchmarking
 
