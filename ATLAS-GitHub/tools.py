@@ -5,10 +5,12 @@ Deterministic matching, the router LLM, and the big model all call into this sam
 safety tier: "safe" (no confirmation) | "caution" (confirm optional, default off) |
              "dangerous" (always confirm from the phone before executing)
 """
+import errno
 import os
 import re
 import shutil
 import subprocess
+import tempfile
 import time
 import zipfile
 from pathlib import Path
@@ -741,7 +743,7 @@ def dependency_graph(project_path: str, file_type: str = None, focus_file: str =
     focus_path = Path(focus_file).expanduser()
     candidate = None
     try:
-        candidate = focus_path.resolve().relative_to(root.resolve()).as_posix()
+        candidate = (root / focus_path).resolve().relative_to(root).as_posix()
     except ValueError:
         candidate = focus_file.replace("\\", "/").lstrip("./")
 
@@ -1268,20 +1270,49 @@ def copy_file(source: str, destination: str, overwrite: bool = False) -> dict:
             "message": f"Copied {src.name} to {dst}."}
 
 
+def _relocate_file(src: Path, dst: Path, overwrite: bool):
+    """Publish over an existing name only by atomic replacement.
+
+    A hard link gives the default no-clobber operation an atomic name claim.
+    Across volumes, finish copying on the destination volume before publication.
+    """
+    try:
+        if dst.exists() and src.samefile(dst):
+            return {"status": "error", "message": "source and destination are the same file"}
+        if dst.is_dir() or not src.is_file():
+            return {"status": "error", "message": "expected file paths"}
+        try:
+            if overwrite:
+                os.replace(src, dst)
+                return None
+            os.link(src, dst, follow_symlinks=False)
+        except OSError as exc:
+            if exc.errno != errno.EXDEV:
+                raise
+            with tempfile.TemporaryDirectory(dir=dst.parent) as scratch:
+                staged = Path(scratch) / "payload"
+                shutil.copy2(src, staged, follow_symlinks=False)
+                if overwrite:
+                    os.replace(staged, dst)
+                else:
+                    os.link(staged, dst, follow_symlinks=False)
+        src.unlink()
+    except OSError as exc:
+        return {"status": "error", "message": str(exc)}
+    return None
+
+
 def move_file(source: str, destination: str, overwrite: bool = False) -> dict:
-    """Moves (renames across directories) a single file via shutil.move.
+    """Moves (renames across directories) a single file with safe destination publication.
     Same single-file, no-silent-overwrite, parent-must-already-exist rules
     as copy_file — see _validate_file_op_paths and this section's module
     comment."""
     src, dst, error = _validate_file_op_paths(source, destination)
     if error:
         return error
-    if dst.exists():
-        if not overwrite:
-            return {"status": "error",
-                    "message": f"destination already exists: {dst} (pass overwrite=true to replace it)"}
-        dst.unlink()
-    shutil.move(str(src), str(dst))
+    error = _relocate_file(src, dst, overwrite)
+    if error:
+        return error
     return {"status": "ok", "source": str(src), "destination": str(dst),
             "message": f"Moved {src.name} to {dst}."}
 
@@ -1303,13 +1334,9 @@ def rename_file(path: str, new_name: str, overwrite: bool = False) -> dict:
                 "message": f"new_name must be a bare filename with no path separators, got {new_name!r}. "
                             f"Use move_file to relocate a file to a different directory."}
     new_path = p.parent / new_name
-    if new_path.exists():
-        if not overwrite:
-            return {"status": "error",
-                    "message": f"a file named {new_name} already exists in {p.parent} "
-                                f"(pass overwrite=true to replace it)"}
-        new_path.unlink()
-    p.rename(new_path)
+    error = _relocate_file(p, new_path, overwrite)
+    if error:
+        return error
     return {"status": "ok", "old_path": str(p), "new_path": str(new_path),
             "message": f"Renamed {p.name} to {new_name}."}
 

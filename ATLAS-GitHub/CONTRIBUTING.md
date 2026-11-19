@@ -4,12 +4,12 @@ Thanks for helping improve ATLAS.
 
 ## Development
 
-Create an isolated environment and install the development dependencies:
+From the application directory, create an isolated environment and install the test dependencies.
 
 ```bash
-python3 -m venv venv
+python3.12 -m venv venv
 source venv/bin/activate
-pip install -r requirements.txt
+python -m pip install -r requirements-test.txt
 ```
 
 Run the test suite:

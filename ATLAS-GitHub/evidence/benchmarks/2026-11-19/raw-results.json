@@ -1,0 +1,44 @@
+[
+  {
+    "phase": "warmup",
+    "repetition": 0,
+    "started_utc": "2026-11-19T17:11:08.484022+00:00",
+    "ended_utc": "2026-11-19T17:11:12.178585+00:00",
+    "model": "qwen3:4b-instruct",
+    "prompt_label": "warmup",
+    "latency_s": 3.64,
+    "success": true,
+    "error": null,
+    "eval_count": 2,
+    "eval_tokens_per_s": 28.3,
+    "load_duration_ns": 3015520416,
+    "eval_duration_ns": 70636000,
+    "prompt_eval_count": 14,
+    "ollama_size_mb": 2732.9,
+    "ollama_size_vram_mb": 2732.9,
+    "before": {
+      "label": "pre-trial",
+      "timestamp": "2026-11-19T17:11:08.472944+00:00",
+      "swap_used_mb": 486.25,
+      "compressed_memory_mb": 5137.5,
+      "memory_pressure": "normal",
+      "cpu_load_1m": 1.91357421875,
+      "cpu_load_5m": 2.06689453125,
+      "cpu_load_15m": 1.8974609375,
+      "total_mib": 16384.0,
+      "available_mib": 3620.5
+    },
+    "after": {
+      "label": "post-trial",
+      "timestamp": "2026-11-19T17:11:12.178650+00:00",
+      "swap_used_mb": 1347.75,
+      "compressed_memory_mb": 5597.9,
+      "memory_pressure": "warn",
+      "cpu_load_1m": 2.08056640625,
+      "cpu_load_5m": 2.0986328125,
+      "cpu_load_15m": 1.90966796875,
+      "total_mib": 16384.0,
+      "available_mib": 2220.9
+    }
+  }
+]

@@ -1,113 +1,81 @@
-# ATLAS
+# Running ATLAS on macOS
 
-> A local-first AI assistant for macOS with intelligent routing, tool use, persistent context, safety gates, and resource-efficient local LLM execution.
+ATLAS serves a browser chat and a FastAPI API on loopback. Run the server from this directory so it can find `chat.html`. For the project motivation, architecture diagram and evidence summary, see the [repository overview](../README.md).
 
-ATLAS is an experimental local AI assistant built around a simple idea: use the cheapest reliable component that can solve a task, and escalate to a stronger model only when necessary.
+## Install the application
 
-Instead of sending every request directly to a large model, ATLAS combines deterministic matching, local model routing, tool execution, persistent memory, and explicit confirmation for potentially destructive actions.
+Install Git, Python 3.12 and [Ollama for macOS](https://ollama.com/download/mac). Repository search also uses the `rg` executable. Opening a project in VS Code requires its `code` command on your path. Other tools can run without those optional programs.
 
-## Highlights
-
-- Deterministic request matching before model escalation
-- Local LLM routing through Ollama
-- Tool execution for project/file/system workflows
-- Persistent SQLite-backed memory and job state
-- Server-issued, one-time confirmation tokens for caution/dangerous actions
-- Local FastAPI API and lightweight browser chat UI
-- Repository inspection, dependency analysis, document summarization, and YouTube transcript workflows
-- Benchmark tooling for measuring latency, capability, and context handling
-- macOS-oriented startup/status/stop helpers
-
-## Architecture
-
-```text
-User Request
-     │
-     ▼
-Request Context
-     │
-     ▼
-Deterministic Matcher
-     │
-     ├── Match found ─────────────► Tool Execution
-     │
-     ▼
-Local Router Model
-     │
-     ├── Tool request ────────────► Tool Execution
-     │
-     └── Needs reasoning ────────► Reasoning Model
-                                      │
-                                      ▼
-                                   Response
+```sh
+git clone https://github.com/vedpatel-real-ai/ATLAS_Personal_AI_Assistant-System.git
+cd ATLAS_Personal_AI_Assistant-System/ATLAS-GitHub
+python3.12 -m venv venv
+. venv/bin/activate
+python -m pip install -r requirements-test.txt
 ```
 
-Potentially destructive operations are separated into safety tiers. Caution/dangerous steps require a server-issued confirmation token that is bound to the exact step list and expires after a short TTL.
+The tested environment includes the runtime packages and the HTTP client used by FastAPI’s tests. For application-only use, install `requirements.txt` in place of `requirements-test.txt`.
 
-## Requirements
+## Select an installed model
 
-- macOS
-- Python 3.12+ recommended
-- [Ollama](https://ollama.com/)
-- Local models compatible with the Ollama configuration you choose
+Open Ollama or run `ollama serve` in a separate terminal. The app expects its local HTTP API on port 11434. Run `ollama list` and look for an installed instruction model that can return JSON for routing. The default tag for all three calls is `qwen3:4b-instruct`. To use another installed model, copy its exact tag into these constants before starting ATLAS.
 
-Install Python dependencies:
+| Setting | Use |
+|---|---|
+| `ROUTER_MODEL` in [router.py](router.py) | Interpret requests and propose tool arguments |
+| `CODER_MODEL` in [main.py](main.py) | Answer direct reasoning requests |
+| `SUMMARIZE_REASONING_MODEL` in [tools.py](tools.py) | Summarize extracted documents and transcripts |
 
-```bash
-python3 -m venv venv
-source venv/bin/activate
-pip install -r requirements.txt
+Restart the application after changing the settings. Model choice can affect routing and summary quality. The test suite runs without installing or loading any models.
+
+## Start and try a request
+
+```sh
+bash start.sh
 ```
 
-Start the assistant:
+The launcher activates `venv`, generates a local key on first use, starts Ollama if needed and starts Uvicorn on `127.0.0.1:8420`. Open `http://127.0.0.1:8420/`, select **API key** and enter the contents of `.secrets/api_key` locally. The UI remembers the key in that browser’s local storage. Try **What's my battery?** to exercise a deterministic route. Look for the reported charging state or the tool’s error if the hardware reading is unavailable.
 
-```bash
-chmod +x start.sh stop.sh status.sh
-./start.sh
+Use `http://127.0.0.1:8420/docs` to inspect the API schema. Runtime logs are under `logs/`. The `atlas.db` database and event log can contain prompts, paths and results. Keep the service on loopback and use one worker. [Security and authentication](SECURITY.md)
+
+`bash status.sh` shows process and port information. The bundled `stop.sh` and the UI shutdown action stop matching Uvicorn processes and Ollama by process name. On a machine sharing those services, run Uvicorn in the foreground instead and stop that instance with Ctrl-C. From this directory with the environment active and an existing generated key, use the following command.
+
+```sh
+export ASSISTANT_API_KEY="$(cat .secrets/api_key)"
+python -m uvicorn main:app --host 127.0.0.1 --port 8420
 ```
 
-The local API is available at `http://127.0.0.1:8420/` and the FastAPI docs at `http://127.0.0.1:8420/docs`.
+## API behavior
 
-## Security and privacy
+| Endpoint | Behavior |
+|---|---|
+| `POST /command` | Authenticates, classifies and returns a text response, tool results, a confirmation request or an error. |
+| `POST /command/async` | Classifies inline, then returns a job ID for background execution or a confirmation request for sensitive steps. |
+| `POST /jobs/{job_id}/confirm` | Verifies the token against the stored steps and starts the approved job. |
+| `GET /jobs/{job_id}`, `GET /jobs` | Read job progress or list recent jobs. |
+| `POST /jobs/{job_id}/cancel` | Requests cancellation. Work already in a step can continue. |
 
-ATLAS executes local actions, so it should be treated as a local automation service rather than exposed directly to the public internet.
+Command, job and shutdown requests need the local key in the `X-API-Key` header. A missing server configuration produces HTTP 503. Missing or incorrect request credentials produce HTTP 401. A successful HTTP exchange can still contain a tool failure. Inspect the returned type and per-step outcomes. [Handler](main.py) · [Result and authentication tests](tests/test_verification_contracts.py)
 
-The public repository intentionally excludes runtime secrets, SQLite databases, logs, virtual environments, caches, and other machine-specific artifacts. `start.sh` generates a fresh local API key under `.secrets/api_key` on first run; that directory is gitignored.
+## Run the tests
 
-Do not commit your local `.secrets/`, `atlas.db`, logs, or benchmark captures that contain private file paths or conversation data.
+With the test dependencies installed and the virtual environment active:
 
-## Benchmarking
-
-The benchmark documentation compares tool-assisted and direct LLM-only workflows across repository analysis, external content extraction, and document summarization.
-
-The current evidence shows useful differences in capability and input handling, but the measurements are experimental. In particular, the document experiment should not be interpreted as a proven token-count reduction when the model-side token counters were equal.
-
-See [`docs/benchmark-report.md`](docs/benchmark-report.md).
-
-## Project status
-
-ATLAS is an active experimental project. The codebase is intended for technical review, experimentation, benchmarking, and further development rather than production deployment.
-
-## Repository layout
-
-```text
-.
-├── main.py                 # FastAPI application and command handling
-├── matcher.py              # Deterministic request matching
-├── router.py               # Local model routing
-├── tools.py                # Tool registry and tool implementations
-├── planner.py              # Execution planning
-├── decision_engine.py      # Action/safety decisions
-├── storage.py              # SQLite persistence and confirmation tokens
-├── memory.py               # Persistent memory helpers
-├── jobs.py                 # Background jobs
-├── request_context.py      # Request/context preparation
-├── system_snapshot.py      # Local system inspection
-├── chat.html               # Browser chat UI
-├── tests/                  # Automated tests
-└── docs/                   # Public project notes and benchmark report
+```sh
+python -m pytest -q tests
 ```
 
-## License
+To export a transcript, JUnit and a manifest for the **committed** revision, use a new output directory. The exporter copies the Git snapshot to temporary storage before running pytest.
 
-This repository is distributed under the MIT License. See [`LICENSE`](LICENSE).
+```sh
+python scripts/verify_tests.py /tmp/atlas-test-evidence
+```
+
+See the [test inventory](docs/verification/TEST_VERIFICATION.md) for fixture boundaries and the [benchmark guide](docs/verification/BENCHMARK_VERIFICATION.md) for the separate local-inference experiment.
+
+## Reading the code
+
+- [Request flow](docs/project-guide/HOW_IT_WORKS.md) follows the browser, matcher, router and registry.
+- [Design decisions](docs/project-guide/DESIGN_DECISIONS.md) explains persistence, graph traversal and approval.
+- [Source-code verification](docs/verification/CLAIM_MATRIX.md) links individual claims to implementations and tests.
+- [Contributing](CONTRIBUTING.md) · [MIT license](LICENSE)

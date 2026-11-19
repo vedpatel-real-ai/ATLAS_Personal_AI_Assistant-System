@@ -2,9 +2,8 @@
 Always-on listener. This is the ONLY process that stays resident all day —
 FastAPI + Tailscale together cost tens of MB, not gigabytes.
 
-A single threading.Lock serializes requests, so the router model and the big
-model can never both be loading at once, even if two phone commands land
-close together.
+A process-local lock guards routing and direct reasoning calls. Tool-internal
+summarization and separate benchmark processes can make independent calls.
 
 execute_tool() centralizes exception handling, timing, and RAM tracking for
 every tool call in one place, instead of scattering try/except everywhere.
@@ -73,6 +72,7 @@ step-granular not mid-step).
 Run with: uvicorn main:app --host 0.0.0.0 --port 8420
 Reach it from your phone at: http://<your-tailscale-mac-name>:8420/command
 """
+import hmac
 import inspect
 import os
 import subprocess
@@ -122,8 +122,7 @@ def chat_ui():
 
 @app.post("/shutdown")
 def shutdown(x_api_key: str = Header(default="")):
-    if API_KEY and x_api_key != API_KEY:
-        raise HTTPException(status_code=401, detail="invalid or missing X-API-Key")
+    require_api_key(x_api_key)
     subprocess.Popen(
         ["/bin/bash", "stop.sh"],
         cwd=os.path.dirname(os.path.abspath(__file__)),
@@ -134,7 +133,7 @@ def shutdown(x_api_key: str = Header(default="")):
     return JSONResponse({"status": "stopping"})
 
 
-MODEL_LOCK = threading.Lock()  # only one model loads/generates at a time
+MODEL_LOCK = threading.Lock()  # shared by the router and direct reasoning paths
 
 API_KEY = os.environ.get("ASSISTANT_API_KEY", "")  # set this before running
 CODER_MODEL = "qwen3:4b-instruct"  # temporary — swap to the 9B coder model once pulled
@@ -156,6 +155,13 @@ class Command(BaseModel):
     # short-circuit straight to L4 on a large/ZIP/PDF attachment instead of
     # guessing from wording alone. e.g. [{"type": "zip", "size_mb": 4.2}].
     attachments: list = []
+
+
+def require_api_key(provided: str) -> None:
+    if not API_KEY.strip():
+        raise HTTPException(status_code=503, detail="assistant API key is not configured")
+    if not hmac.compare_digest(API_KEY.encode(), provided.encode()):
+        raise HTTPException(status_code=401, detail="invalid or missing X-API-Key")
 
 
 def log_event(**kwargs):
@@ -237,7 +243,7 @@ def execute_tool(tool_name: str, params: dict) -> dict:
         fn = TOOLS[tool_name]["fn"]
         safe_params = normalize_params(fn, params)
         result = fn(**safe_params)
-        success = result.get("status") != "error"
+        success = result.get("status") == "ok"
     except Exception as e:
         result = {"status": "error", "message": str(e)}
         success = False
@@ -359,8 +365,7 @@ def _fill_missing_project_path(valid_steps: list, ctx) -> None:
 
 @app.post("/command")
 def handle_command(cmd: Command, x_api_key: str = Header(default="")):
-    if API_KEY and x_api_key != API_KEY:
-        raise HTTPException(status_code=401, detail="invalid or missing X-API-Key")
+    require_api_key(x_api_key)
     check_rate_limit()
 
     start = time.time()
@@ -589,9 +594,8 @@ def _run_tool_job(job_id: str, valid_steps: list, unknown_steps: list,
 
 @app.post("/command/async")
 def handle_command_async(cmd: Command, x_api_key: str = Header(default="")):
-    """Same classification as /command (via _route_command) but never
-    blocks on model load, generation, or tool execution — returns a
-    job_id immediately and does the actual work on a background thread.
+    """Same classification as /command (via _route_command) with classification performed inline.
+    Tool execution and direct reasoning run on a background thread.
     Response shapes:
       {"type": "job_accepted", "job_id", "status": "running", "route"}
       {"type": "confirm_required", "job_id", "confirm_token", "steps"} —
@@ -599,8 +603,7 @@ def handle_command_async(cmd: Command, x_api_key: str = Header(default="")):
         confirm_token to /jobs/{job_id}/confirm to actually start it.
       {"type": "error", "response"} — unmatched intent, same as /command.
     """
-    if API_KEY and x_api_key != API_KEY:
-        raise HTTPException(status_code=401, detail="invalid or missing X-API-Key")
+    require_api_key(x_api_key)
     check_rate_limit()
 
     ctx = build_request_context(cmd.text, cmd.attachments)
@@ -661,8 +664,7 @@ def confirm_job(job_id: str, body: ConfirmJobRequest, x_api_key: str = Header(de
     /command's second call does (same storage.verify_and_consume_
     confirmation — one confirmation-token implementation, not two), then
     starts background execution."""
-    if API_KEY and x_api_key != API_KEY:
-        raise HTTPException(status_code=401, detail="invalid or missing X-API-Key")
+    require_api_key(x_api_key)
 
     job = jobs.get_job(job_id)
     if job is None:
@@ -685,8 +687,7 @@ def get_job_status(job_id: str, x_api_key: str = Header(default="")):
     """Poll endpoint — current status, progress (per-step outcomes so
     far), and, once terminal, the final result in the exact same shape
     /command would have returned synchronously."""
-    if API_KEY and x_api_key != API_KEY:
-        raise HTTPException(status_code=401, detail="invalid or missing X-API-Key")
+    require_api_key(x_api_key)
     job = jobs.get_job(job_id)
     if job is None:
         raise HTTPException(status_code=404, detail="unknown job_id")
@@ -701,8 +702,7 @@ def cancel_job(job_id: str, x_api_key: str = Header(default="")):
     generation). Returns whether a live job was actually signaled, not
     whether it has stopped yet — the caller should poll /jobs/{id} to see
     the eventual status."""
-    if API_KEY and x_api_key != API_KEY:
-        raise HTTPException(status_code=401, detail="invalid or missing X-API-Key")
+    require_api_key(x_api_key)
     job = jobs.get_job(job_id)
     if job is None:
         raise HTTPException(status_code=404, detail="unknown job_id")
@@ -715,6 +715,5 @@ def list_jobs(x_api_key: str = Header(default=""), limit: int = 20):
     """Most recent jobs, newest first — a debugging/status convenience
     (same spirit as storage.query_recent_failures()), not something the
     phone client necessarily needs day to day."""
-    if API_KEY and x_api_key != API_KEY:
-        raise HTTPException(status_code=401, detail="invalid or missing X-API-Key")
+    require_api_key(x_api_key)
     return {"jobs": storage.query_recent_jobs(limit=limit)}

@@ -1,0 +1,2 @@
+ended_utc,error,eval_count,eval_duration_ns,eval_tokens_per_s,latency_s,load_duration_ns,model,ollama_size_mb,ollama_size_vram_mb,phase,prompt_eval_count,prompt_label,repetition,started_utc,success
+2026-11-19T17:11:12.178585+00:00,,2,70636000,28.3,3.64,3015520416,qwen3:4b-instruct,2732.9,2732.9,warmup,14,warmup,0,2026-11-19T17:11:08.484022+00:00,True
