@@ -1,9 +1,6 @@
 # ATLAS — Implementation State
 
-> Read this file first each session. It's the source of truth for what's
-> actually built vs. what the spec (`Project ATLAS — Engineering
-> Specification`, v4) merely describes. Update it as the last step of any
-> session that changes code.
+> Historical milestone notes from July 2026. For the current implementation and dated measurements see the [verification guide](verification/README.md).
 
 **Last updated:** 2026-07-12 (this session)
 **Spec revision this tracks against:** v4

@@ -1,0 +1,27 @@
+{
+  "started_utc": "2026-11-19T17:11:08.447681+00:00",
+  "macos": "27.0",
+  "architecture": "arm64",
+  "python": "3.12.13",
+  "ollama": "0.32.0",
+  "order": [
+    "qwen3:4b-instruct",
+    "qwen3:8b"
+  ],
+  "snapshots": [
+    {
+      "label": "before qwen3:4b-instruct",
+      "timestamp": "2026-11-19T17:11:08.455726+00:00",
+      "swap_used_mb": 486.25,
+      "compressed_memory_mb": 5137.5,
+      "memory_pressure": "normal",
+      "cpu_load_1m": 1.91357421875,
+      "cpu_load_5m": 2.06689453125,
+      "cpu_load_15m": 1.8974609375,
+      "total_mib": 16384.0,
+      "available_mib": 3622.5
+    }
+  ],
+  "status": "Trial or pressure check stopped qwen3:4b-instruct after warmup 0 warmup",
+  "ended_utc": "2026-11-19T17:11:12.193972+00:00"
+}

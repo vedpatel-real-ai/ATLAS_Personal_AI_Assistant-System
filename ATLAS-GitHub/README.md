@@ -1,8 +1,10 @@
 # ATLAS
 
-> A local-first AI assistant for macOS with intelligent routing, tool use, persistent context, safety gates, and resource-efficient local LLM execution.
+> A local macOS assistant for commands, project inspection and tool-assisted summarization.
 
-ATLAS is an experimental local AI assistant built around a simple idea: use the cheapest reliable component that can solve a task, and escalate to a stronger model only when necessary.
+ATLAS tries ordinary code first for familiar commands. Its router and direct reasoning paths both specify `qwen3:4b-instruct`. A registry maps 24 tool names to Python functions. Two entries, stock quotes and email delivery, return an unfinished status.
+
+[Inspect the test and benchmark evidence](docs/verification/README.md).
 
 Instead of sending every request directly to a large model, ATLAS combines deterministic matching, local model routing, tool execution, persistent memory, and explicit confirmation for potentially destructive actions.
 
@@ -24,7 +26,7 @@ Instead of sending every request directly to a large model, ATLAS combines deter
 User Request
      │
      ▼
-Request Context
+Request Context ── ZIP/PDF or large attachment metadata ──► Direct reasoning
      │
      ▼
 Deterministic Matcher
@@ -36,7 +38,7 @@ Local Router Model
      │
      ├── Tool request ────────────► Tool Execution
      │
-     └── Needs reasoning ────────► Reasoning Model
+     └── Needs reasoning ────────► Direct reasoning
                                       │
                                       ▼
                                    Response

@@ -20,3 +20,7 @@ logs/
 benchmark_reports/
 benchmark_captures/
 private-notes/
+ATLAS-GitHub/ci-results/
+ATLAS-GitHub/atlas_tools_*.json
+ATLAS-GitHub/atlas_notools_*.json
+ATLAS-GitHub/tokens_*run*.json

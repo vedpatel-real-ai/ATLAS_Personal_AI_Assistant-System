@@ -216,7 +216,7 @@ The advantage is giving the LLM access to capabilities it does not naturally hav
 
 # Raw Evidence Files
 
-Available:
+The July report named the following files. The verification search did not recover them. See the [November benchmark audit](verification/BENCHMARK_VERIFICATION.md).
 
 - atlas_tools_depgraph_v2.json
 - atlas_tools_doc_run1.json

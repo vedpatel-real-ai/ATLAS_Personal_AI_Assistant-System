@@ -1,0 +1,61 @@
+{
+  "models": {
+    "qwen3:4b-instruct": {
+      "name": "qwen3:4b-instruct",
+      "digest": "0edcdef34593eac1aa2be9c7d06c432dcf81945adca5eca2f27662c18f168ba0",
+      "size": 2497293803,
+      "details": {
+        "parent_model": "",
+        "format": "gguf",
+        "family": "qwen3",
+        "families": [
+          "qwen3"
+        ],
+        "parameter_size": "4.0B",
+        "quantization_level": "Q4_K_M",
+        "context_length": 262144,
+        "embedding_length": 2560
+      }
+    },
+    "qwen3:8b": {
+      "name": "qwen3:8b",
+      "digest": "500a1f067a9f782620b40bee6f7b0c89e17ae61f686b92c24933e4ca4b2b8b41",
+      "size": 5225388164,
+      "details": {
+        "parent_model": "",
+        "format": "gguf",
+        "family": "qwen3",
+        "families": [
+          "qwen3"
+        ],
+        "parameter_size": "8.2B",
+        "quantization_level": "Q4_K_M",
+        "context_length": 40960,
+        "embedding_length": 4096
+      }
+    }
+  },
+  "requested_options": {
+    "temperature": 0,
+    "seed": 42,
+    "num_ctx": 2048,
+    "num_predict": 64
+  },
+  "think": false,
+  "tasks": [
+    [
+      "tool_style",
+      "The user said: 'open vscode'. Respond with what tool call this maps to and why, in one sentence."
+    ],
+    [
+      "code_reasoning",
+      "Explain in 2-3 sentences what a race condition is and give one concrete way to avoid one in Python."
+    ],
+    [
+      "summarization",
+      "Summarize the following in 2 sentences: 'The Decision Engine formalizes escalation logic into five explicit levels, L0 through L4, so the level that handled a request can be logged and reported on later. It does not change what the underlying matcher-then-router-then-big-model chain actually does; it only labels which step handled a given request.'"
+    ]
+  ],
+  "repetitions": 3,
+  "warmups_per_model": 1
+}
