@@ -183,8 +183,8 @@ def _sample_loaded_model_size(ps_url: str, model: str) -> Optional[dict]:
             size = entry.get("size")
             size_vram = entry.get("size_vram")
             return {
-                "size_mb": round(size / (1024 * 1024), 1) if size else None,
-                "size_vram_mb": round(size_vram / (1024 * 1024), 1) if size_vram else None,
+                "size_mb": round(size / (1024 * 1024), 1) if size is not None else None,
+                "size_vram_mb": round(size_vram / (1024 * 1024), 1) if size_vram is not None else None,
             }
     return None
 
@@ -225,27 +225,32 @@ class _PeakSizeSampler:
 
 
 def run_trial(model: str, prompt_label: str, prompt_text: str, url: str,
-              keep_alive: str, timeout_s: int, think: Optional[bool] = None) -> dict:
+              keep_alive: str, timeout_s: int, think: Optional[bool] = None,
+              options: Optional[dict] = None) -> dict:
     ps_url = _ps_url_from_generate_url(url)
     payload = {"model": model, "prompt": prompt_text, "stream": False, "keep_alive": keep_alive}
+    if options is not None:
+        payload["options"] = options
     if think is not None:
         payload["think"] = think
 
     with _PeakSizeSampler(ps_url, model) as sampler:
-        start = time.time()
+        start = time.perf_counter()
         try:
             resp = requests.post(url, json=payload, timeout=timeout_s)
             resp.raise_for_status()
             data = resp.json()
+            if data.get("error") or data.get("done") is False:
+                raise ValueError("Ollama did not finish generation")
         except Exception as e:
-            latency_s = round(time.time() - start, 2)
+            latency_s = round(time.perf_counter() - start, 2)
             return {"model": model, "prompt_label": prompt_label,
                     "latency_s": latency_s, "success": False,
                     "error": str(e), "eval_count": None,
                     "eval_tokens_per_s": None,
                     "ollama_size_mb": sampler.peak_size_mb,
                     "ollama_size_vram_mb": sampler.peak_size_vram_mb}
-        latency_s = round(time.time() - start, 2)
+        latency_s = round(time.perf_counter() - start, 2)
 
     eval_count = data.get("eval_count")
     eval_duration_ns = data.get("eval_duration")
@@ -256,6 +261,8 @@ def run_trial(model: str, prompt_label: str, prompt_text: str, url: str,
     return {"model": model, "prompt_label": prompt_label,
             "latency_s": latency_s, "success": True, "error": None,
             "eval_count": eval_count, "eval_tokens_per_s": tokens_per_s,
+            "load_duration_ns": data.get("load_duration"), "eval_duration_ns": eval_duration_ns,
+            "prompt_eval_count": data.get("prompt_eval_count"),
             "ollama_size_mb": sampler.peak_size_mb,
             "ollama_size_vram_mb": sampler.peak_size_vram_mb}
 
