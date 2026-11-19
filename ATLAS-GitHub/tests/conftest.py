@@ -25,18 +25,19 @@ def pytest_configure(config):
 
 
 @pytest.fixture(autouse=True)
-def isolated_runtime(tmp_path, monkeypatch):
+def isolated_runtime(tmp_path, tmp_path_factory, monkeypatch):
     import main
     import tools
 
-    monkeypatch.setattr(storage, "DB_PATH", tmp_path / "atlas.db")
-    monkeypatch.setattr(storage, "JSONL_PATH", tmp_path / "events.jsonl")
+    runtime = tmp_path_factory.mktemp("runtime")
+    monkeypatch.setattr(storage, "DB_PATH", runtime / "atlas.db")
+    monkeypatch.setattr(storage, "JSONL_PATH", runtime / "events.jsonl")
     storage.init_db()
     monkeypatch.setattr(main, "_request_times", deque())
     monkeypatch.setattr(tools, "_index_cache", {})
     monkeypatch.setattr(tools.psutil, "sensors_battery",
                         lambda: SimpleNamespace(percent=50, power_plugged=False))
-    project = tmp_path / "workspace"
+    project = runtime / "workspace"
     project.mkdir()
     (project / "main.py").write_text("import math\n")
     monkeypatch.chdir(project)

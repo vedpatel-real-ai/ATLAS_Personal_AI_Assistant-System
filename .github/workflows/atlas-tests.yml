@@ -1,0 +1,37 @@
+name: ATLAS test verification
+on:
+  push:
+    paths: ['ATLAS-GitHub/**', '.github/workflows/atlas-tests.yml']
+  pull_request:
+    paths: ['ATLAS-GitHub/**', '.github/workflows/atlas-tests.yml']
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  pytest:
+    runs-on: macos-15
+    timeout-minutes: 15
+    defaults:
+      run:
+        working-directory: ATLAS-GitHub
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12.13'
+      - run: python -m pip install -r requirements-test.txt
+      - run: python scripts/verify_tests.py ci-results
+      - if: always()
+        run: |
+          if test -f ci-results/test-summary.md; then
+            cat ci-results/test-summary.md >> "$GITHUB_STEP_SUMMARY"
+          else
+            echo 'Setup or evidence generation stopped before a test summary was available.' >> "$GITHUB_STEP_SUMMARY"
+          fi
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: pytest-macos
+          path: ATLAS-GitHub/ci-results/
